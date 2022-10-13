@@ -1,0 +1,222 @@
+const { Client, CommandInteraction, MessageEmbed, MessageActionRow, MessageSelectMenu } = require("discord.js");
+const emotes = require('../../emotes.json')
+
+module.exports = {
+    name: "serverinfo",
+    description: "Display informations about server",
+    category: 'Utility',
+    /**
+     *
+     * @param {Client} client
+     * @param {CommandInteraction} interaction
+     * @param {String[]} args
+     */
+    run: async (client, interaction, args) => {
+        const owner = await interaction.guild.fetchOwner()
+
+        const row = new MessageActionRow()
+        .addComponents(
+            new MessageSelectMenu()
+            .setCustomId('select')
+            .setPlaceholder('See informations about')
+            .addOptions(
+                {
+                    label: "channels",
+                    value: "ichannels",
+                    description: "See informations about channels"
+                },
+                {
+                    label: "members",
+                    value: "imembers",
+                    description: "See informations about members" 
+                },
+                {
+                    label: "emojis",
+                    value: "iemojis",
+                    description: "See informations about emojis" 
+                },
+                {
+                    label: "roles",
+                    value: "iroles",
+                    description: "See informations about roles" 
+                },
+                {
+                    label: "back",
+                    value: "iback",
+                    description: "Back to global informations" 
+                }
+            )
+        )
+        // boosts
+        const types = {
+            NONE: "No level",
+            TIER_1: "Level 1",
+            TIER_2: "Level 2",
+            TIER_3: "Level 3",
+        }
+        const level = types[interaction.guild.premiumTier]
+        const boosts = interaction.guild.premiumSubscriptionCount || "0"
+
+        // channels
+        const text = interaction.guild.channels.cache.filter((channel) => channel.type === "GUILD_TEXT").size
+        const voice = interaction.guild.channels.cache.filter((channel) => channel.type === "GUILD_VOICE").size
+        const category = interaction.guild.channels.cache.filter((channel) => channel.type === "GUILD_CATEGORY").size
+        const totalC = interaction.guild.channels.cache.size
+        const threads = interaction.guild.channels.cache.filter((channel) => channel.type === "GUILD_NEWS_THREAD" && "GUILD_PRIVATE_THREAD" && "PUILD_PUBLIC_THREAD").size
+        const stages = interaction.guild.channels.cache.filter((channel) => channel.type === "GUILD_STAGE_VOICE").size
+        // members
+        const totalM = interaction.guild.memberCount
+        const humans = interaction.guild.members.cache.filter(m => !m.user.bot).size
+        const bots = interaction.guild.members.cache.filter(m => m.user.bot).size
+        // emojis
+        const totalE = interaction.guild.emojis.cache.size
+        const static = interaction.guild.emojis.cache.filter(m => !m.animated).size
+        const animated = interaction.guild.emojis.cache.filter(m => m.animated).size
+        // roles
+        const totalR = interaction.guild.roles.cache.size -1
+        const rolesL = interaction.guild.roles.cache.filter((role) => role.id !== interaction.guild.roles.everyone.id).map((r) => `<@&${r.id}>`).join(', ')
+        const boostR = interaction.guild.roles.premiumSubscriberRole
+        const highR = interaction.guild.roles.highest
+
+        const reply = await interaction.deferReply({ fetchReply: true })
+        const embed = new MessageEmbed()
+        .setAuthor(
+            interaction.guild.name,
+            interaction.guild.iconURL({dynamic: true})
+        )
+        .addField(`${emotes.archive} General informations`, `
+        ・ Owner: <@${owner.id}>
+        ・ Guild ID: \` ${interaction.guild.id} \`
+        ・ Vanity URL: \` ${interaction.guild.vanityURLCode || "No vanity"} \`
+        ・ Created? <t:${parseInt(interaction.guild.createdAt / 1000)}:R>`)
+        if(interaction.guild.features.includes('COMMUNITY')) {
+        embed.addField(`${emotes.check} Moderator channels`, `
+        ・ AFK channel: ${interaction.guild.afkChannel || "` Not set `"}
+        ・ System channel: ${interaction.guild.systemChannel}
+        ・ Rules channel: ${interaction.guild.rulesChannel}`)
+        } else {
+            embed.addField(`${emotes.check} Moderator channels`, `
+            ・ AFK channel: ${interaction.guild.afkChannel || "` Not set `"}
+            ・ System channel: ${interaction.guild.systemChannel}`) 
+        }
+        embed.addField(`${emotes.boost} Boosts`, `
+        ・ Count: \` ${boosts} \`
+        ・ Level: \` ${level} \`
+        ・ Progressbar enabled? \` ${interaction.guild.premiumProgressBarEnabled ? "Yes" : "No"} \``)
+        .setColor('2f3136')
+        .setThumbnail(interaction.guild.iconURL({dynamic: true}))
+
+        interaction.editReply({embeds: [embed], components: [row] })
+
+        const collector = reply.createMessageComponentCollector({
+            time: 1000 * 60 * 5
+          })
+          
+          collector.on('end', () => {
+            interaction.editReply({
+              components: [
+                new MessageActionRow()
+                  .addComponents(
+                    row.components.map(component => component.setDisabled(true))  
+                  )
+              ],
+              embeds: [embed]
+            })
+          })
+
+        
+        collector.on('collect', async (i) => {
+            if(i.user.id !== interaction.user.id) return i.reply({ content: sender.errorMsg('Invalid user!'), ephemeral: true})
+            if(i.values[0] === "ichannels") {
+                const embed = new MessageEmbed()
+                .setAuthor(
+                    interaction.guild.name,
+                    interaction.guild.iconURL({dynamic: true})
+                )
+                .addField(`${emotes.channel} General informations`, `
+                ・ Channel count: \` ${totalC} \`
+                ・ Text channels: \` ${text} \`
+                ・ Voice channels: \` ${voice} \`
+                ・ All threads: \` ${threads} \`
+                ・ Stages: \` ${stages} \`
+                ・ Categories: \` ${category} \``)
+                .setColor('2f3136')
+                .setThumbnail(interaction.guild.iconURL({dynamic: true}))
+                i.update({embeds: [embed] })
+            }
+            if(i.values[0] === "imembers") {
+                const embed = new MessageEmbed()
+                .setAuthor(
+                    interaction.guild.name,
+                    interaction.guild.iconURL({dynamic: true})
+                )
+                .addField(`${emotes.person} General informations`, `
+                ・ Members count: \` ${totalM} \`
+                ・ Humans: \` ${humans} \`
+                ・ Bots: \` ${bots} \``)
+                .setColor('2f3136')
+                .setThumbnail(interaction.guild.iconURL({dynamic: true}))
+                i.update({embeds: [embed] })
+            }
+            if(i.values[0] === 'iemojis') {
+                const embed = new MessageEmbed()
+                .setAuthor(
+                    interaction.guild.name,
+                    interaction.guild.iconURL({dynamic: true})
+                )
+                .addField(`${emotes.paint} General informations`, `
+                ・ Emojis count: \` ${totalE} \`
+                ・ Static emojis: \` ${static} \`
+                ・ Animated emojis: \` ${animated} \``)
+                .setColor('2f3136')
+                .setThumbnail(interaction.guild.iconURL({dynamic: true}))
+                i.update({embeds: [embed] })
+            }
+            if(i.values[0] === "iroles") {
+            const embed = new MessageEmbed()
+            .setAuthor(
+                interaction.guild.name,
+                interaction.guild.iconURL({dynamic: true})
+            )
+            .addField(`${emotes.hammer} General informations`, `
+            ・ Roles count: \` ${totalR} \`
+            ・ Highest role: ${highR}
+            ・ Booster role: ${boostR || "` No role `"}
+            ・ List of roles:
+            ${rolesL}`)
+            .setColor('2f3136')
+            .setThumbnail(interaction.guild.iconURL({dynamic: true}))
+            i.update({embeds: [embed] })
+            }
+            if(i.values[0] === "iback") {
+                const embed = new MessageEmbed()
+                .setAuthor(
+                    interaction.guild.name,
+                    interaction.guild.iconURL({dynamic: true})
+                )
+                .addField(`${emotes.archive} General informations`, `
+                ・ Owner: <@${owner.id}>
+                ・ Guild ID: \` ${interaction.guild.id} \`
+                ・ Vanity URL: \` ${interaction.guild.vanityURLCode || "No vanity"} \`
+                ・ Created? <t:${parseInt(interaction.guild.createdAt / 1000)}:R>`)
+                if(interaction.guild.features.includes('COMMUNITY')) {
+                embed.addField(`${emotes.check} Moderator channels`, `
+                ・ AFK channel: ${interaction.guild.afkChannel || "` Not set `"}
+                ・ System channel: ${interaction.guild.systemChannel || "` Not set `"}
+                ・ Rules channel: ${interaction.guild.rulesChannel}`)
+                } else {
+                    embed.addField(`${emotes.check} Moderator channels`, `
+                    ・ AFK channel: ${interaction.guild.afkChannel || "` Not set `"}
+                    ・ System channel: ${interaction.guild.systemChannel || "` Not set `"}`) 
+                }
+                embed.addField(`${emotes.boost} Boosts`, `
+                ・ Count: \` ${boosts} \`
+                ・ Level: \` ${level} \`
+                ・ Progressbar enabled? \` ${interaction.guild.premiumProgressBarEnabled ? "Yes" : "No"} \``)
+                .setColor('2f3136')
+                .setThumbnail(interaction.guild.iconURL({dynamic: true}))
+                i.update({embeds: [embed] })
+            }
+        })
+    }
+}
