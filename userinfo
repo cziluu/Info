@@ -1,0 +1,85 @@
+const { Client, CommandInteraction, MessageEmbed } = require("discord.js");
+const emotes = require('../../emotes.json')
+ 
+module.exports = {
+    name: "userinfo",
+    description: "Display informations about any user",
+    category: 'Utility',
+    options: [
+        {
+            name: "user",
+            description: "Enter user",
+            type: "USER",
+            required: true
+        }
+    ],
+    /**
+     *
+     * @param {Client} client
+     * @param {CommandInteraction} interaction
+     * @param {String[]} args
+     */
+     run: async (client, interaction, args) => {
+        const member = interaction.options.getUser("user") || interaction.user;
+        const guildMember = interaction.guild.members.cache.get(member.id)
+ 
+        await interaction.deferReply()
+        const embed = new MessageEmbed()
+        .setAuthor(
+            member.tag,
+            member.displayAvatarURL({dynamic: true})
+        )
+        .addField(`${emotes.person} Basic informations`, `
+        ・ Profile: <@${member.id}>
+        ・ Username: \` ${member.username} \`
+        ・ Discriminator: \` #${member.discriminator} \`
+        ・ ID: \` ${member.id} \`
+        ・ Created? <t:${parseInt(member.createdTimestamp / 1000)}:R>`)
+ 
+        if(guildMember) {
+            function capitalizeFirstLetter(string) {
+                return string.charAt(0).toUpperCase() + string.slice(1);
+              }
+ 
+              const activity = guildMember.presence?.activities[0]
+            let customStatusActivity
+            if(activity) {
+                if(activity?.type === 'CUSTOM') customStatusActivity = activity?.state
+                else customStatusActivity = `${capitalizeFirstLetter(activity?.type.toLowerCase())} - ${activity?.state || activity?.name}`
+            }
+            const statuses = {
+                online: `${emotes.online}`,
+                idle: `${emotes.idle}`,
+                dnd: `${emotes.dnd}`,
+                offline: `${emotes.offline}`
+                }
+                const status = statuses[guildMember.presence?.status]
+        embed.addField(`${emotes.archive} Platform informations`, `
+        ・ Identified as bot? \` ${member.bot ? "Yes" : "No"} \`
+        ・ Status: ${status || `${emotes.offline}`}
+        ・ Activity: \`\`\`${customStatusActivity || "No activity"}\`\`\``)
+        } else {
+        embed.addField(`${emotes.archive} Platform informations`, `
+        ・ Identified as bot? \` ${member.bot ? "Yes" : "No"} \``)
+        }
+ 
+        if(guildMember) {
+        embed.addField(`${emotes.award} Server informations`, `
+        ・ Nickname: \` ${guildMember.displayName} \`
+        ・ Booster? \` ${guildMember.premiumSince ? "Yes" : "No"} \`
+        ・ Roles: \` ${guildMember.roles.cache.size -1} \`
+        ・ Joined? <t:${parseInt(guildMember.joinedAt / 1000)}:R>`)
+        }
+        const user = await member.fetch({ force: true})
+        embed.addField(`${emotes.link} Utility links`, `
+        ・ [\` ${member.username}'s profile \`](https://discord.com/users/${member.id}) 
+        ・ [\` ${member.username}'s avatar \`](${member.displayAvatarURL({dynamic: true})})
+        ${!user.banner ? "** **" : `・ [\` ${member.username}'s banner \`](${user.bannerURL({dynamic: true, size: 4096})})`}`)
+        if(user.banner) {
+        embed.setImage(`${user.bannerURL({dynamic: true, size: 2048})}`)
+        }
+        embed.setColor('2f3136')
+        .setThumbnail(member.displayAvatarURL({dynamic: true}))
+        interaction.editReply({embeds: [embed] })
+    }
+}
