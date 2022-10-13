@@ -1,0 +1,46 @@
+const { Client, CommandInteraction, MessageEmbed } = require("discord.js");
+const emotes = require('../../emotes.json')
+const Discord = require('discord.js')
+const os = require("os");
+const ms = require("ms");
+
+module.exports = {
+    name: "botinfo",
+    description: "Display informations about bot",
+    category: 'Utility',
+    /**
+     *
+     * @param {Client} client
+     * @param {CommandInteraction} interaction
+     * @param {String[]} args
+     */
+    run: async (client, interaction, args) => {
+
+        const uptime = process.uptime();
+        const days = Math.floor((uptime % 31536000) / 86400);
+        const hours = Math.floor((uptime % 86400) / 3600);
+        const minutes = Math.floor((uptime % 3600) / 60);
+        const seconds = Math.round(uptime % 60);
+        const botuptime = (days > 0 ? days + 'd, ' : '') + (hours > 0 ? hours + 'h, ' : '') + (minutes > 0 ? minutes + 'm, ' : '') + (seconds > 0 ? seconds + 's' : '');
+
+        await interaction.deferReply()
+        const embed = new MessageEmbed()
+        .setAuthor(
+            client.user.username,
+            client.user.displayAvatarURL({dynamic: true})
+        )
+        .addField(`${emotes.archive} Overview`, `
+        ・ Profile: <@${client.user.id}>
+        ・ ID: \` ${client.user.id} \`
+        ・ Uptime: \` ${botuptime} \`
+        ・ Created: <t:${parseInt(Discord.SnowflakeUtil.deconstruct(client.user.id).timestamp / 1000)}:R>`)
+        
+        .addField(`${emotes.award} Stats`, `
+        ・ Users: \` ${client.guilds.cache.reduce((acc, guild) => acc + guild.memberCount, 0)} \` \` (${client.users.cache.size} cached) \`
+        ・ Channels \` ${client.channels.cache.size} \`
+        ・ Guilds: \` ${client.guilds.cache.size} \`
+        ・ Commands: \` ${(await client.application.commands.fetch()).size} \``)
+        .setColor('2f3136')
+        interaction.editReply({embeds: [embed] })
+    }
+}
