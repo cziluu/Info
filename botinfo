@@ -3,6 +3,8 @@ const emotes = require('../../emotes.json')
 const Discord = require('discord.js')
 const os = require("os");
 const ms = require("ms");
+const QuickDB = require('quick.db')
+client.db = new QuickDB({filePath: "./Data/database.sqlite"});
 
 module.exports = {
     name: "botinfo",
